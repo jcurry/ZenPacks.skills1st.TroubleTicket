@@ -6,7 +6,8 @@ ZenPacks.ZenSystems.TroubleTicket
 Description
 ===========
 
-Provides an interface between Zenoss and a Trouble Ticket system.
+Provides an interface between Zenoss and a Trouble Ticket system. In the sample test environment, the
+Trouble Ticket system was Remedy 7.5 on a Windows 2008 R2 system.
 
 The ZenPack assumes that the Trouble Ticket system will be on a separate system from
 the Zenoss Server and that ssh will be used to communicate between the systems.  A polling daemon,
@@ -15,7 +16,7 @@ and create a ticket if filters are passed.  If a ticket is created then:
     * The Zenoss event is Acknowledged
     * The event ownerid field is set to Ticket
     * The event summary is modified to add the trouble ticket number returned by the ticket system
-    * The event for the log is upadted with the message "Trouble Ticket created"
+    * The event for the log is updated with the message "Trouble Ticket created"
 
 In addition, the zentt daemon can close any Zenoss event for which a ticket has NOT been created and
 which passes any specified filters.
@@ -24,7 +25,7 @@ The zentt daemon is highly configurable using its $ZENHOME/etc/zentt.conf file. 
 be installed provided no existing $ZENHOME/etc/zentt.conf file exists.  See later section for zentt.conf details.
 
 A sample shellscript, zenoss-remote-ticket, is shipped in the ZenPack's lib directory, to generate Remedy 
-tickets.  This file must be copied to the Trouble Ticket system.
+tickets.  This file must be copied to the Trouble Ticket system.  
 
 zentt logs to $ZENHOME/log/zentt.log.
 The sample zenoss-remote-ticket ticket creation script logs to tickets.log in the Cygwin home directory of the zenoss user.
@@ -174,8 +175,7 @@ Components
 ==========
 
 The ZenPack has the following relevant files:
-    * __init__.py to ensure that the example zentt.conf.example file is copied to $ZENHOME/etc when the ZenPack is 
-installed. If no zentt.conf exists there then it will also be copied to $ZENHOME/etc/zentt.conf.
+    * __init__.py to ensure that the example zentt.conf.example file is copied to $ZENHOME/etc when the ZenPack is installed. If no zentt.conf exists there then it will also be copied to $ZENHOME/etc/zentt.conf.
     * daemon.py is code to daemonise zentt.py
     * daemons/zentt also required to daemonise the zentt daemon. Has commented out strace debug line if you get desperate.
     * lib/zentt.conf.example with sample config file
@@ -189,7 +189,7 @@ Requirements & Dependencies
     * Zenoss Versions Supported: 3.x NB. This will NOT work on 4.x
     * External Dependencies: ssh must be installed and tested between Zenoss and Trouble Ticket system.
     * ZenPack Dependencies: None
-    * Installation Notes: zenhub must be restart after installing this ZenPack and zentt must be started.
+    * Installation Notes: zenhub and zopectl must be restart after installing this ZenPack and zentt must be started.
     * Configuration: 
 
 Download
@@ -293,7 +293,7 @@ Screenshots
 
 .. _Latest Package for Python 2.6: https://github.com/jcurry/ZenPacks.skills1st.TroubleTicket/blob/master/dist/ZenPacks.skills1st.TroubleTicket-1.0-py2.6.egg?raw=true
 
-.. |myScreenshot| image:: http://github.com/jcurry/ZenPacks.ZenSystems.ApcUps/raw/master/screenshots/myScreenshot.jpg
+.. |myScreenshot| image:: http://github.com/jcurry/ZenPacks.skills1st.TroubleTicket/raw/master/screenshots/myScreenshot.jpg
 
                                                                         
 
