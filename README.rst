@@ -1,5 +1,5 @@
 =================================
-ZenPacks.ZenSystems.TroubleTicket
+ZenPacks.skills1st.TroubleTicket
 =================================
 
 
@@ -13,10 +13,11 @@ The ZenPack assumes that the Trouble Ticket system will be on a separate system 
 the Zenoss Server and that ssh will be used to communicate between the systems.  A polling daemon,
 zentt, runs at a configurable interval (120 seconds by default) to assess any new Zenoss events
 and create a ticket if filters are passed.  If a ticket is created then:
-    * The Zenoss event is Acknowledged
-    * The event ownerid field is set to Ticket
-    * The event summary is modified to add the trouble ticket number returned by the ticket system
-    * The event for the log is updated with the message "Trouble Ticket created"
+
+* The Zenoss event is Acknowledged
+* The event ownerid field is set to Ticket
+* The event summary is modified to add the trouble ticket number returned by the ticket system
+* The event for the log is updated with the message "Trouble Ticket created"
 
 In addition, the zentt daemon can close any Zenoss event for which a ticket has NOT been created and
 which passes any specified filters.
