@@ -1,0 +1,25 @@
+#!/bin/sh
+#
+# zenoss-remote-ticket
+#
+# Remote ticket creation test script
+
+date >> tickets.log
+echo "$@" >> tickets.log
+echo "" >> tickets.log
+
+
+# Run the Remedy macro
+#
+# We want to end up with a command of the form (DOS format example):
+#
+# "C:\Program Files (x86)\BMC Software\ARSystem\runmacro" -h c:\Home -d c:\home\arcmds -x localhost -e Create -U Zenoss -P Zenoss -O -p Customer="a" -p Device="Dev" -p DeviceIP="c" -p EventClass="d" -p First="date1" -p Last="date2" -p Count="3" -p Summary="test" -p Owner="o" -p Severity="2" -p Group="g" -p Impact="5" -p Component="test" -p Queue="n" -p Ticket="101"
+#
+# Most of the args will be sent from the Zenoss TT process
+# Here we just put on the initial boilerplate and process the output of the Remedy macro
+#
+/cygdrive/c/Program\ Files\ \(x86\)/BMC\ Software/ARSystem/runmacro.exe \
+	-h 'c:\Home' -d 'c:\home\arcmds' -x localhost -e Create -U Zenoss -P Zenoss -O "$@" 2>/dev/null |
+	awk -e '/was successfully created/ { print $2 }'
+
+

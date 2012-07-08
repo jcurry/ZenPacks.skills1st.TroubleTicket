@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+#set -x
+DAEMON_NAME="zentt"
+
+CFGDIR=$ZENHOME/etc
+CFGFILE=$CFGDIR/$DAEMON_NAME.conf
+
+MYPATH=$(readlink -f $0)
+MYPATH=$(dirname $MYPATH)
+# If you get desperate, uncomment the next line to strace the daemon
+#strace -o /tmp/zenticket.trace -f python $MYPATH/../zentt.py $1
+python $MYPATH/../zentt.py $1

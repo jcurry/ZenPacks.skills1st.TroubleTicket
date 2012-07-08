@@ -2,15 +2,15 @@
 # These variables are overwritten by Zenoss when the ZenPack is exported
 # or saved.  Do not modify them directly here.
 # NB: PACKAGES is deprecated
-NAME = ''
-VERSION = '1.0.0'
-AUTHOR = ''
-LICENSE = ''
-NAMESPACE_PACKAGES = []
-PACKAGES = []
+NAME = "ZenPacks.skills1st.TroubleTicket"
+VERSION = "1.0"
+AUTHOR = "Jane Curry"
+LICENSE = ""
+NAMESPACE_PACKAGES = ['ZenPacks', 'ZenPacks.skills1st']
+PACKAGES = ['ZenPacks', 'ZenPacks.skills1st', 'ZenPacks.skills1st.TroubleTicket']
 INSTALL_REQUIRES = []
-COMPAT_ZENOSS_VERS = ''
-PREV_ZENPACK_NAME = ''
+COMPAT_ZENOSS_VERS = ">=3.1"
+PREV_ZENPACK_NAME = ""
 # STOP_REPLACEMENTS
 ################################
 # Zenoss will not overwrite any changes you make below here.

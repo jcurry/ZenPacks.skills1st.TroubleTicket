@@ -1,0 +1,140 @@
+# Example configuration for TroubleTicket Zenpack
+#
+# The DEFAULT section supplies defaults for all the others
+# (including the DAEMONSTUFF section, but best to avoid those keywords here)
+#
+[DEFAULT]
+
+# Each section below defines a class of events to generate tickets for.
+# The id and queue are just names that are passed to the ticket system.
+# The class only triggers for events matching the filters in the class.
+#
+# Most filters can have many items, e.g. matching on device groups uses
+# any option in the section whose name starts 'devicegroups'.
+# Every option in a class must have a different name, so it is necessary
+# to add names or numbers after the initial keyword, e.g.:
+# devicegroups-1: /Linux_group
+# devicegroups-other: /Other
+#
+# Filters that are matching text strings can be regular expressions:
+# to do this, add '-re' to the option name:
+#
+# devicegroups-1: Literal text match
+# devicegroups-re-2: Regular expression match
+#
+# Case is not significant in option names.
+# Case is not significant in string matching or regular expressions.
+# The order of options in a class section is not significant.
+#
+# All option values have leading and trailing spaces removed before use.
+# This means that if you need to match a substring ending with a space
+# character you have to make that explicit, e.g.:
+# summary-re-7: ^threshold\s
+# summary-re-8: ^threshold .
+#
+# Section names are not currently significant, apart from the special 'DEFAULT' and 'DAEMONSTUFF' sections.
+
+# Generate tickets for example.org:
+#
+[Example Org]
+# Parameters that will be available to the ticket-creation command
+param-custid: ExampleOrg
+param-queue: Level 1
+#
+# Match any of these Zenoss device groups
+devicegroups-1: /Linux_group
+devicegroups-3: /Other
+devicegroups-4: /Server
+devicegroups-5: /Up-Down
+devicegroups-re-16: ^/Raddle_group$
+# must not be in these device groups
+notdevicegroups-1: /Unwanted
+# Device name in event must match one of these
+device-re-1: \.example\.org$
+# Device name must NOT match any of these
+notdevice-re-1: \.unwanted\.com$
+notdevice-re-2: \.notours\.com$
+# Match any of these production states
+prodState-min: 500
+prodState-max: 1000
+# Severity must be at least 4
+severity-min: 4
+# Must match at least one of these regular expressions in the summary field
+# summary-re-1: ^threshold
+# summary-re-2: down$
+# Must NOT match any of these regular expressions in the summary field
+notsummary-1: Unknown
+notsummary-2: Trivial
+# Must match at least one of these strings or regular expressions in the Device Class
+# deviceClass-re-1: .
+# Must NOT match any of these strings or regular expressions in the Device Class
+notDeviceClass-2: /Discovered
+
+[Skills 1st]
+# Parameters that will be available to the ticket-creation command
+param-custid: Skills 1st
+param-queue: Level 1
+#
+devicegroups-15: /Skills-servers
+prodState-prod: 1000
+prodState-preprod: 500
+# Severity must be 4 or 5
+severity-err: 4
+severity-crit: 5
+
+#
+# Example using parameter substitution
+#
+# [My First Customer]
+# id:customer1
+# queue:Level 1
+# customer=CUSTOMER NAME
+# devicegroups-1:/%(customer)s
+# devicegroups-2:/%(customer)s/Network
+# devicegroups-3:/%(customer)s/Security
+# devicegroups-4:/%(customer)s/Server
+# devicegroups-5:/%(customer)s/Up-Down
+
+[AUTOCLEAR]
+# Define events that will automatically be cleared if a ticket was not created for them
+#
+# This is important: in most cases we don't want to clear events that have been Ack'ed or that are suppressed
+eventstate-new: 0
+#
+# Only clear events in this device group
+devicegroups-1: /NoSuchGroup
+#
+# Do not clear any events in this event class
+noteventclass-1: /Status/Ping
+#
+# Do not clear any events matching these regular expressions
+notsummary-re-1: SNMP agent down
+notsummary-re-2: interface operationally down
+notsummary-re-3: threshold of
+#
+# Do not clear debug events
+notseverity-debug: 1
+#
+
+[DAEMONSTUFF]
+# Command to create a ticket
+# This will be parsed into arguments using a shell-like syntax,
+# then each argument will undergo parameter substitution using the %name% syntax.
+# The resulting list of arguments will be passed directly to Python's subprocess.popen method.
+# No shell is involved, so redirection is not supported.
+#
+ttcommand: /usr/bin/ssh -i /home/zenoss/.ssh/id_dsa %param-ttuser%@%param-tthost% bin/zenoss-remote-ticket -p 'Customer="%param-custid%"' -p 'Device="%device%"' -p 'DeviceIP="%ipAddress%"' -p 'EventClass="%eventClass%"' -p 'First="%firstTime%"' -p 'Last="%lastTime%"' -p 'Count="%count%"' -p 'Summary="%summary%"' -p 'Owner="%ownerid%"' -p 'Severity="%severity%"' -p 'Group="%DeviceGroups%"' -p 'Impact="%DevicePriority%"' -p 'Component="%component%"' -p 'Queue="%param-queue%"' -p 'Ticket="%evid%"'
+
+# ssh usernam and hostname for access to  the troubleticket system
+param-ttuser: zenoss
+param-tthost: ec2-54-247-1-121.eu-west-1.compute.amazonaws.com
+
+# How often the troubleticket process runs
+# 300s might be reasonable
+cycletime: 120
+
+# Default values for some ticket creation parameters
+# All param- values can be overridden in the class sections above
+param-custid: Unknown Customer
+param-queue: Unknown queue
+#
