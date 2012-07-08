@@ -29,9 +29,8 @@ tickets.  This file must be copied to the Trouble Ticket system.
 zentt logs to $ZENHOME/log/zentt.log.
 The sample zenoss-remote-ticket ticket creation script logs to tickets.log in the Cygwin home directory of the zenoss user.
 
-------------------------------------------------------------------------
 The zentt.conf Configuration File
-------------------------------------------------------------------------
+=================================
 
 ZenTT reads its configuration file at startup.
 The file has a structure similar to what you would find on Microsoft Windows INI files.
@@ -60,9 +59,8 @@ a trouble-ticket is created. This allows tickets to be labelled in different way
 section triggers them.
 
 
-------------------------------------------------------------------------
 Filtering
-------------------------------------------------------------------------
+---------
 
 ZenTT uses filters to select which events to process.
 Filters can test for the presence or absence of particular values in almost every attribute of the event.
@@ -117,9 +115,8 @@ They can also use the special 'min' and 'max' suffixes to specify a range:
 
 If both list and range are supplied, the range overrules the list.
 
-......................
 Tests
-......................
+-----
 
 For a full description of the event attributes, see the TALES Expressions appendix in the Zenoss Admin Guide.
 
@@ -160,9 +157,8 @@ systems, notsystems: string/regex
 ipaddress, notipaddress: string/regex
     The IPv4 address of the device
 
-......................
 Filter Examples
-......................
+---------------
 
 Here is a filter that matches events from devices in the /Linux group and also from devices
 in any /Server group except for /Server/Testing. Events must be at least Error (4) severity.
