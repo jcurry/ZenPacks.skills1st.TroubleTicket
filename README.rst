@@ -15,9 +15,8 @@ zentt, runs at a configurable interval (120 seconds by default) to assess any ne
 and create a ticket if filters are passed.  If a ticket is created then:
 
 * The Zenoss event is Acknowledged
-* The event ownerid field is set to Ticket
-* The event summary is modified to add the trouble ticket number returned by the ticket system
-* The event for the log is updated with the message "Trouble Ticket created"
+* The event ownerid field is set to 'Ticket <n>' where <n> is the trouble ticket number
+* The log for the event is updated with the message "Trouble Ticket created"
 
 In addition, the zentt daemon can close any Zenoss event for which a ticket has NOT been created and
 which passes any specified filters.
@@ -28,7 +27,7 @@ be installed provided no existing $ZENHOME/etc/zentt.conf file exists.  See late
 A sample shellscript, zenoss-remote-ticket, is shipped in the ZenPack's lib directory, to generate Remedy 
 tickets.  This file must be copied to the Trouble Ticket system.  
 
-zentt logs to $ZENHOME/log/zentt.log.
+zentt logs to $ZENHOME/log/zentt.log. The logfile is rotated when it reaches 10MB
 The sample zenoss-remote-ticket ticket creation script logs to tickets.log in the Cygwin home directory of the zenoss user.
 
 The zentt.conf Configuration File
