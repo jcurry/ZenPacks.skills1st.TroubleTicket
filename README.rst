@@ -184,6 +184,7 @@ give it a name that will sort at the end of the list (such as 'ZZZZ Catch All')
 and give it a filter that matches every event, e.g.:
 
 ::
+
   [ZZZ Catch All]
   severity-min: 0
 
