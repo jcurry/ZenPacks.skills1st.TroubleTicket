@@ -278,19 +278,30 @@ def analyseEvent( config, dmd, evt ):
     if evt.eventState != 0:
         return 0
 
+    # Do we want to allow the creation of multiple tickets for a single event?
+    multiTicket = 0
+    if config.has_option("DAEMONSTUFF", "multi-ticket"):
+	multiTicket = config.get("DAEMONSTUFF", "multi-ticket")
+	if ((multiTicket == '1') or (multiTicket.lower() == 'yes')):
+	    multiTicket = 1
+	else:
+	    multiTicket = 0
+    logger.debug( "multiTicket: %d", multiTicket )
+
     # Log a warning if a device does not belong to any groups.
     if not evt.DeviceGroups.replace('|',''):
 	logger.warning("Device %s is not in a device group in event %s" % (evt.device, evt.evid))
 
-    # Consider each section in the config file
-    for s in config.sections():
+    # Consider each section in the config file in turn
+    # Do this in alphabetical order, ignoring case
+    for s in sorted(config.sections(), key=str.lower):
         try:
 	    if ((s == 'DAEMONSTUFF') or (s == 'AUTOCLEAR')):
 		# Ignore the main daemon config section and the history matching section
 		# (DEFAULT is automatically skipped)
 		continue
 
-	    logger.debug( "Section %s" % (s) )
+	    logger.debug( "## Section %s" % (s) )
 
 	    # Compare event against filters - do we want it?
 	    if not selectEvent( config, s, evt ):
@@ -430,6 +441,11 @@ def analyseEvent( config, dmd, evt ):
 		except ZenEventNotFound:
 		    pass
 
+	    if not multiTicket:
+	        # We have created one ticket for this event.
+		# Do not consider any more sections
+		break
+
         except TicketError as e:
             logger.error( "Ticket creation failed for %s: %s" % (evt.evid, e.errmsg) )
             ticketerror = 1
@@ -519,8 +535,8 @@ class MyDaemon(Daemon):
 		if tt > 0:
 		    numttcreated = numttcreated + tt
 
-		# No errors, but the event is new and no ticket was created for it
-		if tt == 0:
+		# No errors, but if no ticket was created then we may want to clear the event
+		if ((tt == 0) and (config.has_section('AUTOCLEAR'))):
 		    # If no ticket was created then consider clearing the event
 		    logger.debug( "Checking AUTOCLEAR" )
 
