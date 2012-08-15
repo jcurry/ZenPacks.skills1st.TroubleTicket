@@ -32,20 +32,28 @@ logfile = os.path.join(os.environ['ZENHOME'], 'log/zentt.log')
 
 # Configure logging.
 
+# First remove any default handlers
 for handler in logging.root.handlers[:]:
     logging.root.removeHandler(handler)
 
-# Is this needed here - also inside daemon code
+logger = logging.getLogger('ZenTT')
+logger.setLevel(logging.DEBUG)
+# create file handler
+fh = logging.handlers.RotatingFileHandler( logfile, maxBytes=10000000, backupCount=3 )
+fh.setLevel(logging.INFO)
+# create formatter and add it to the handlers
+logFormatter = logging.Formatter(fmt='%(asctime)s %(levelname)s ZenTT: %(message)s',
+		                datefmt='%Y-%m-%d %H:%M:%S')
 
-logging.basicConfig(level=logging.INFO,
-        format='%(asctime)s %(levelname)s zen.zentt: %(message)s',
-        datefmt='%Y-%m-%d %H:%M:%S',
-        filename=logfile,
-        filemode='a')
-logging.info('zentt logfile is %s ' % (logfile))
+fh.setFormatter(logFormatter)
+# add the handler to the logger
+logger.addHandler(fh)
 
-# If running in foreground we print debug data
-fg = 0
+# Exception class for failure to create tickets
+#
+class TicketError(Exception):
+    def __init__(self, errmsg):
+        self.errmsg = errmsg
 
 # Match a list of strings against the list of regexes or literal strings in a specific config section
 # e.g. to find whether a device group is of interest
@@ -62,16 +70,13 @@ def configREMatch( config, s, prefix, list, default ):
 	if not m: continue
 	# Note that we have seen at least one matching option
 	seen = 1
-	# if fg: print "opt is ", opt
 	# Is this a regex match item? (name has -re)
 	suffix = m.group(1)
 	if suffix and (suffix.lower() == 're-'):
-	    # if fg: print ("option %s is a regex: %s" % (opt, config.get(s, opt).rstrip()))
 	    # The option value should be treated as a regex
 	    pattern = re.compile( config.get(s, opt).rstrip(), re.IGNORECASE )
 	    # Is there a match for that pattern in the supplied list?
 	    for item in list:
-		# if fg: print "Testing item ", item
 		if pattern.search( item ):
 		    return True;
 	else:
@@ -91,7 +96,7 @@ def configREMatch( config, s, prefix, list, default ):
 def getIntOptValue( config, s, opt ):
     value = config.get(s, opt).rstrip()
     if not re.search( '^[-+]?[0-9]+$', value ):
-	logging.error("Option %s in section %s has a non-integer value: %s" % (opt, s, value))
+	logger.error("Option %s in section %s has a non-integer value: %s" % (opt, s, value))
 	return 0
     return int(value)
 
@@ -112,8 +117,6 @@ def configIntMatch( config, s, prefix, value ):
     # We have not yet seen a list spec
     seenlist = 0
 
-    # if fg: print "configIntMatch ", prefix, " ", value
-
     # Walk through ALL the options
     for opt in config.options(s):
 	# Ignore config options that do not have the prefix of interest
@@ -122,8 +125,6 @@ def configIntMatch( config, s, prefix, value ):
 
 	optvalue = getIntOptValue( config, s, opt )
 	suffix = m.group(1)
-
-	# if fg: print "considering ", opt, " ", optvalue
 
 	# Is this a -min option?
 	if suffix and (suffix.lower() == 'min'):
@@ -156,107 +157,107 @@ def configIntMatch( config, s, prefix, value ):
 def selectEvent( config, s, evt ):
     # Does the event have a group that this section is interested in?
     if not configREMatch( config, s, 'devicegroups', evt.DeviceGroups.split('|'), True ):
-	if fg: print "devicegroup match fails"
+	logger.debug( "devicegroup match fails" )
 	return 0
 
     # Does the event have a devicegroup that this section wants to avoid?
     if configREMatch( config, s, 'notdevicegroups', evt.DeviceGroups.split('|'), False ):
-	if fg: print "notdevicegroup match fails"
+	logger.debug( "notdevicegroup match fails" )
 	return 0
 
     # Does the event have a device that this section is interested in?
     if not configREMatch( config, s, 'device', [evt.device], True ):
-	if fg: print "device match fails"
+	logger.debug( "device match fails" )
 	return 0
 
     # Does the event have a device that this section wants to avoid?
     if configREMatch( config, s, 'notdevice', [evt.device], False ):
-	if fg: print "notdevice match fails"
+	logger.debug( "notdevice match fails" )
 	return 0
 
     # Does the event have a device class that this section is interested in?
     if not configREMatch( config, s, 'deviceclass', [evt.DeviceClass], True ):
-	if fg: print "deviceclass match fails"
+	logger.debug( "deviceclass match fails" )
 	return 0
 
     # Does the event have a device class that this section wants to avoid?
     if configREMatch( config, s, 'notdeviceclass', [evt.DeviceClass], False ):
-	if fg: print "notdeviceclass match fails"
+	logger.debug( "notdeviceclass match fails" )
 	return 0
 
     # Check the production state
     if not configIntMatch( config, s, 'prodstate', evt.prodState ):
-	if fg: print "prodstate match fails"
+	logger.debug( "prodstate match fails" )
 	return 0
 
     # Check the eventState
     if not configIntMatch( config, s, 'eventstate', evt.eventState ):
-	if fg: print "eventstate match fails"
+	logger.debug( "eventstate match fails" )
 	return 0
 
     # Check the severity
     if not configIntMatch( config, s, 'severity', evt.severity ):
-	if fg: print "severity match fails"
+	logger.debug( "severity match fails" )
 	return 0
 
     # Does the event have a summary that this section is interested in?
     if not configREMatch( config, s, 'summary', [evt.summary], True ):
-	if fg: print "summary match fails"
+	logger.debug( "summary match fails" )
 	return 0
 
     # Does the event have a summary that this section wants to avoid?
     if configREMatch( config, s, 'notsummary', [evt.summary], False ):
-	if fg: print "notsummary match fails"
+	logger.debug( "notsummary match fails" )
 	return 0
 
     # Does the event have a message that this section is interested in?
     if not configREMatch( config, s, 'message', [evt.message], True ):
-	if fg: print "message match fails"
+	logger.debug( "message match fails" )
 	return 0
 
     # Does the event have a message that this section wants to avoid?
     if configREMatch( config, s, 'notmessage', [evt.message], False ):
-	if fg: print "notmessage match fails"
+	logger.debug( "notmessage match fails" )
 	return 0
 
     # Does the event have a component that this section is interested in?
     if not configREMatch( config, s, 'component', [evt.component], True ):
-	if fg: print "component match fails"
+	logger.debug( "component match fails" )
 	return 0
 
     # Does the event have a component that this section wants to avoid?
     if configREMatch( config, s, 'notcomponent', [evt.component], False ):
-	if fg: print "notcomponent match fails"
+	logger.debug( "notcomponent match fails" )
 	return 0
 
     # Does the event have a location that this section is interested in?
     if not configREMatch( config, s, 'location', [evt.Location], True ):
-	if fg: print "location match fails"
+	logger.debug( "location match fails" )
 	return 0
 
     # Does the event have a location that this section wants to avoid?
     if configREMatch( config, s, 'notlocation', [evt.Location], False ):
-	if fg: print "notlocation match fails"
+	logger.debug( "notlocation match fails" )
 	return 0
 
     # Does the event have a systems organiser that this section is interested in?
     if not configREMatch( config, s, 'systems', evt.Systems.split('|'), True ):
-	if fg: print "systems match fails"
+	logger.debug( "systems match fails" )
 	return 0
 
     # Does the event have a systems organiser that this section wants to avoid?
     if configREMatch( config, s, 'notsystems', evt.Systems.split('|'), False ):
-	if fg: print "notsystems match fails"
+	logger.debug( "notsystems match fails" )
 	return 0
 
     # Does the event have an ipaddress that this section is interested in?
     if not configREMatch( config, s, 'ipaddress', [evt.ipAddress], True ):
-	if fg: print "ipaddress match fails"
+	logger.debug( "ipaddress match fails" )
 	return 0
 
     # Does the event have an ipaddress that this section wants to avoid?
     if configREMatch( config, s, 'notipaddress', [evt.ipAddress], False ):
-	if fg: print "notipaddress match fails"
+	logger.debug( "notipaddress match fails" )
 	return 0
 
     # We want this one!
@@ -265,7 +266,7 @@ def selectEvent( config, s, evt ):
 
 # Function to analyse an event and possibly create a troubleticket
 def analyseEvent( config, dmd, evt ):
-    if fg: print "analyseEvent"
+    logger.debug( "analyseEvent" )
 
     # Configure initial variables for ticket create routine.
     ticket = None
@@ -277,172 +278,203 @@ def analyseEvent( config, dmd, evt ):
     if evt.eventState != 0:
         return 0
 
+    # Do we want to allow the creation of multiple tickets for a single event?
+    multiTicket = 0
+    if config.has_option("DAEMONSTUFF", "multi-ticket"):
+	multiTicket = config.get("DAEMONSTUFF", "multi-ticket")
+	if ((multiTicket == '1') or (multiTicket.lower() == 'yes')):
+	    multiTicket = 1
+	else:
+	    multiTicket = 0
+    logger.debug( "multiTicket: %d", multiTicket )
+
     # Log a warning if a device does not belong to any groups.
     if not evt.DeviceGroups.replace('|',''):
-	logging.warning("Device %s is not in a device group in event %s" % (evt.device, evt.evid))
+	logger.warning("Device %s is not in a device group in event %s" % (evt.device, evt.evid))
 
-    # Consider each section in the config file
-    for s in config.sections():
-	if ((s == 'DAEMONSTUFF') or (s == 'AUTOCLEAR')):
-	    # Ignore the main daemon config section and the history matching section
-	    # (DEFAULT is automatically skipped)
-	    continue
-
-	if fg: print "Section ", s
-
-	# Compare event against filters - do we want it?
-	if not selectEvent( config, s, evt ):
-	    continue
-
-	if fg: print "########## after filter - about to create ticket"
-
-	# OK - we need to create a ticket, so grab the command-line template
-	ttcommand = config.get("DAEMONSTUFF", "ttcommand")
-	# Parse that into a list of args
-	ttargs = shlex.split( ttcommand )
-
-	# Prepare a dictionary with all the things we might want to substitute
-	data = {}
-	# Start by loading in all of the DAEMONSTUFF options
-	for opt in config.options('DAEMONSTUFF'):
-	    data['%'+opt+'%'] = config.get('DAEMONSTUFF', opt).rstrip()
-	# Next load in the 'param-*' options from the current section
-	# (this may override some existing values)
-	optpattern = re.compile( 'param-', re.IGNORECASE )
-	for opt in config.options(s):
-	    # Ignore config options that do not have the prefix of interest
-	    m = optpattern.match(opt)
-	    if not m: continue
-	    # Load the value
-	    data['%'+opt+'%'] = config.get(s, opt).rstrip()
-        # Now load in data from the event
-	data['%evid%'] = str(evt.evid)
-	data['%device%'] = str(evt.device)
-	data['%component%'] = str(evt.component)
-	data['%eventclass%'] = str(evt.eventClass)
-	data['%eventkey%'] = str(evt.eventKey)
-	data['%summary%'] = str(evt.summary)
-	data['%message%'] = str(evt.message)
-	data['%severity%'] = str(evt.severity)
-	data['%eventstate%'] = str(evt.eventState)
-	data['%eventclasskey%'] = str(evt.eventClassKey)
-	data['%eventgroup%'] = str(evt.eventGroup).lstrip('|')
-	data['%statechange%'] = str(evt.stateChange)
-	data['%firsttime%'] = str(evt.firstTime)
-	data['%lasttime%'] = str(evt.lastTime)
-	data['%count%'] = str(evt.count)
-	data['%prodstate%'] = str(evt.prodState)
-	data['%suppid%'] = str(evt.suppid)
-	data['%manager%'] = str(evt.manager)
-	data['%agent%'] = str(evt.agent)
-	data['%deviceclass%'] = str(evt.DeviceClass)
-	data['%location%'] = str(evt.Location)
-	data['%systems%'] = str(evt.Systems).lstrip('|')
-	data['%devicegroups%'] = str(evt.DeviceGroups).lstrip('|')
-	data['%ipaddress%'] = str(evt.ipAddress)
-	data['%facility%'] = str(evt.facility)
-	data['%priority%'] = str(evt.priority)
-	data['%ntevid%'] = str(evt.ntevid)
-	data['%ownerid%'] = str(evt.ownerid)
-	data['%clearid%'] = str(evt.clearid)
-	data['%devicepriority%'] = str(evt.DevicePriority)
-	data['%eventclassmapping%'] = str(evt.eventClassMapping)
-
-	# NOTE:
-	# May need to convert times to some other format.
-	# Here is a handy pattern for parsing them...
-	# pattern = '%Y/%m/%d %H:%M:%S'
-	# epoch = int(time.mktime(time.strptime(evt.lastTime.split('.')[0], pattern)))
-
-	# Work through the argument list substituting where we can.
-	#
-	for index,arg in enumerate(ttargs):
-	    # if fg: print "string: ", arg
-            # we have a string in 'arg' which may contain %var% substitution keys
-	    # First we must split that string into a list where each %var% is a separate item
-	    keypattern = re.compile( r'(%[a-z0-9_-]+%)', re.IGNORECASE )
-	    keylist = re.split( keypattern, arg )
-	    # Now walk through the list doing the substitutions
-	    for index2,arg2 in enumerate(keylist):
-		# if fg: print "key: ", arg2
-		if data.has_key(arg2.lower()):
-		    keylist[index2] = data[arg2.lower()]
-		# if fg: print "KEY: ", keylist[index2]
-	    # Finally, join all that up again and put it back in the main arg list
-	    ttargs[index] = ''.join( keylist )
-	    # if fg: print "STRING: ", ttargs[index], "\n"
-
-	    
-	if fg: print ttargs
-
-	try:
-	    # Run the ticket create script (while passing necessary arguments to it).
-	    p = subprocess.Popen(ttargs, stdout=subprocess.PIPE)
-
-	    if fg: print "after popen"
-
-	    if not p:
-		if fg: print ("Unable to run ticket creation command %s" % (ttcommand))
-		logging.error("Unable to run ticket creation command %s" % (ttcommand))
-		ticketerror = 1
+    # Consider each section in the config file in turn
+    # Do this in alphabetical order, ignoring case
+    for s in sorted(config.sections(), key=str.lower):
+        try:
+	    if ((s == 'DAEMONSTUFF') or (s == 'AUTOCLEAR')):
+		# Ignore the main daemon config section and the history matching section
+		# (DEFAULT is automatically skipped)
 		continue
 
-	    # Let the command run and collect its output
-	    (stdoutdata, stderrdata) = p.communicate()
-	    if fg: print "TT Script said: ", stdoutdata
+	    logger.debug( "## Section %s" % (s) )
 
-	except OSError:
-	    if fg: print ("Error while running ticket creation command")
-	    logging.error("Error while running ticket creation command")
-	    # Give up and try again later
-	    ticketerror = 1
-	    continue
+	    # Compare event against filters - do we want it?
+	    if not selectEvent( config, s, evt ):
+		continue
 
-	# Get the ticket ID
-	ticket = stdoutdata.rstrip()
-        # Sanity check
-	if not re.search( r'[0-9]+', ticket ):
-	    if fg: print ("No ticket ID returned from troubleticket system for event %s" % (evt.evid))
-	    logging.error("No ticket ID returned from troubleticket system for event %s" % (evt.evid))
-	    ticketerror = 1
-	    continue
+	    logger.debug( "creating ticket" )
 
-	ntickets += 1
+	    # OK - we need to create a ticket, so grab the command-line template
+	    ttcommand = config.get("DAEMONSTUFF", "ttcommand")
+	    # Parse that into a list of args
+	    ttargs = shlex.split( ttcommand )
 
-	logging.info("Ticket %s created for event %s" % (ticket, evt.evid))
+	    # Prepare a dictionary with all the things we might want to substitute
+	    data = {}
+	    # Start by loading in all of the DAEMONSTUFF options
+	    for opt in config.options('DAEMONSTUFF'):
+		data['%'+opt+'%'] = config.get('DAEMONSTUFF', opt).rstrip()
+	    # Next load in the 'param-*' options from the current section
+	    # (this may override some existing values)
+	    optpattern = re.compile( 'param-', re.IGNORECASE )
+	    for opt in config.options(s):
+		# Ignore config options that do not have the prefix of interest
+		m = optpattern.match(opt)
+		if not m: continue
+		# Load the value
+		data['%'+opt+'%'] = config.get(s, opt).rstrip()
+	    # Now load in data from the event
+	    data['%evid%'] = str(evt.evid)
+	    data['%device%'] = str(evt.device)
+	    data['%component%'] = str(evt.component)
+	    data['%eventclass%'] = str(evt.eventClass)
+	    data['%eventkey%'] = str(evt.eventKey)
+	    data['%summary%'] = str(evt.summary)
+	    data['%message%'] = str(evt.message)
+	    data['%severity%'] = str(evt.severity)
+	    data['%eventstate%'] = str(evt.eventState)
+	    data['%eventclasskey%'] = str(evt.eventClassKey)
+	    data['%eventgroup%'] = str(evt.eventGroup).lstrip('|')
+	    data['%statechange%'] = str(evt.stateChange)
+	    data['%firsttime%'] = str(evt.firstTime)
+	    data['%lasttime%'] = str(evt.lastTime)
+	    data['%count%'] = str(evt.count)
+	    data['%prodstate%'] = str(evt.prodState)
+	    data['%suppid%'] = str(evt.suppid)
+	    data['%manager%'] = str(evt.manager)
+	    data['%agent%'] = str(evt.agent)
+	    data['%deviceclass%'] = str(evt.DeviceClass)
+	    data['%location%'] = str(evt.Location)
+	    data['%systems%'] = str(evt.Systems).lstrip('|')
+	    data['%devicegroups%'] = str(evt.DeviceGroups).lstrip('|')
+	    data['%ipaddress%'] = str(evt.ipAddress)
+	    data['%facility%'] = str(evt.facility)
+	    data['%priority%'] = str(evt.priority)
+	    data['%ntevid%'] = str(evt.ntevid)
+	    data['%ownerid%'] = str(evt.ownerid)
+	    data['%clearid%'] = str(evt.clearid)
+	    data['%devicepriority%'] = str(evt.DevicePriority)
+	    data['%eventclassmapping%'] = str(evt.eventClassMapping)
 
-	if fg: print "########## ticket done"
+	    # NOTE:
+	    # May need to convert times to some other format.
+	    # Here is a handy pattern for parsing them...
+	    # pattern = '%Y/%m/%d %H:%M:%S'
+	    # epoch = int(time.mktime(time.strptime(evt.lastTime.split('.')[0], pattern)))
 
-	# If ticket was successfully created, acknowledge the event in Zenoss.
-	eventlist = [evt.evid]
-	if evt.eventState == 0:
+	    # Work through the argument list substituting where we can.
+	    #
+	    for index,arg in enumerate(ttargs):
+		# we have a string in 'arg' which may contain %var% substitution keys
+		# First we must split that string into a list where each %var% is a separate item
+		keypattern = re.compile( r'(%[a-z0-9_-]+%)', re.IGNORECASE )
+		keylist = re.split( keypattern, arg )
+		# Now walk through the list doing the substitutions
+		for index2,arg2 in enumerate(keylist):
+		    if data.has_key(arg2.lower()):
+			keylist[index2] = data[arg2.lower()]
+		# Finally, join all that up again and put it back in the main arg list
+		ttargs[index] = ''.join( keylist )
+
+	    logger.debug( "command: %s" % ( str(ttargs) ) )
+
 	    try:
-		# Ack
-		dmd.ZenEventManager.manage_setEventStates(1, eventlist)
+		# Run the ticket create script (while passing necessary arguments to it).
+		p = subprocess.Popen(ttargs, stdout=subprocess.PIPE)
 
-		# Update event info
-		update="update status set summary='%s', ownerid='%s'" % (evt.summary + ' ticket created ' + str(ticket) , 'Ticket')
-		whereClause = "where evid in ("
-		whereClause += ",".join([ "'%s'" % evid for evid in eventlist]) + ")"
-		reason = 'Trouble Ticket created'
-		dmd.ZenEventManager.updateEvents(update, whereClause, reason)
+		if not p:
+		    raise TicketError("Unable to run ticket creation command %s" % (ttcommand))
 
-	    # Ignore certain errors thrown by MySQL and Zenoss.
-	    except OperationalError, err:
-		if err[0] == 1205:
+		# Let the command run and collect its output
+		(stdoutdata, stderrdata) = p.communicate()
+		logger.debug( "TT Script stdout: %s" % (stdoutdata) )
+		logger.debug( "TT Script stderr: %s" % (stderrdata) )
+
+	    except OSError as e:
+                if e.filename:
+		    raise TicketError("Error while running ticket creation command: %s: %s" % (e.filename, e.strerror))
+                else:
+		    raise TicketError("Error while running ticket creation command: %s" % (e.strerror))
+
+	    # Get the ticket ID
+	    ticket = stdoutdata.rstrip()
+	    # Sanity check
+	    if not re.search( r'[0-9]+', ticket ):
+		raise TicketError("No ticket ID returned from troubleticket system")
+
+	    ntickets += 1
+
+	    logger.info("Ticket %s created for event %s" % (ticket, evt.evid))
+
+	    # If ticket was successfully created, acknowledge the event in Zenoss.
+	    eventlist = [evt.evid]
+	    if evt.eventState == 0:
+		try:
+		    # Ack
+		    dmd.ZenEventManager.manage_setEventStates(1, eventlist)
+
+		    # Update event info
+		    update="update status set ownerid='%s'" % ('Ticket ' + ticket)
+		    whereClause = "where evid = '%s'" % (evt.evid)
+		    reason = 'Trouble Ticket created: ' + ticket
+		    dmd.ZenEventManager.updateEvents(update, whereClause, reason)
+
+		# Ignore certain errors thrown by MySQL and Zenoss.
+		except OperationalError, err:
+		    if err[0] == 1205:
+			pass
+		    elif err[0] == 1213:
+			pass
+		    elif err[0] == 1422:
+			pass
+		    elif err[0] == 1206:
+			pass
+		    elif err[0] == 2002:
+			pass
+		    else:
+			raise
+		except ZenEventNotFound:
 		    pass
-		elif err[0] == 1213:
+
+	    if not multiTicket:
+	        # We have created one ticket for this event.
+		# Do not consider any more sections
+		break
+
+        except TicketError as e:
+            logger.error( "Ticket creation failed for %s: %s" % (evt.evid, e.errmsg) )
+            ticketerror = 1
+	    # If this event has not errored before, we need to update the message
+	    if 'FAILED' not in evt.ownerid:
+	        try:
+		    update="update status set ownerid='Ticket FAILED'"
+		    whereClause = "where evid = '%s'" % (evt.evid)
+		    reason = 'Ticket creation failed'
+		    dmd.ZenEventManager.updateEvents(update, whereClause, reason)
+
+		# Ignore certain errors thrown by MySQL and Zenoss.
+		except OperationalError, err:
+		    if err[0] == 1205:
+			pass
+		    elif err[0] == 1213:
+			pass
+		    elif err[0] == 1422:
+			pass
+		    elif err[0] == 1206:
+			pass
+		    elif err[0] == 2002:
+			pass
+		    else:
+			raise
+		except ZenEventNotFound:
 		    pass
-		elif err[0] == 1422:
-		    pass
-		elif err[0] == 1206:
-		    pass
-		elif err[0] == 2002:
-		    pass
-		else:
-		    raise
-	    except ZenEventNotFound:
-		pass
+
+            continue
 
     if ticketerror: return -1
 
@@ -454,10 +486,16 @@ def analyseEvent( config, dmd, evt ):
 class MyDaemon(Daemon):
     def run(self):
 
+	# Get handle on Zenoss itself
         dmd = ZenScriptBase(connect=True).dmd
 
-        logging.info(' Start of daemon run self')
-        if fg: print ' Start of daemon run self'
+        # Configure logging within daemon code space.
+        for handler in logging.root.handlers[:]:
+            logging.root.removeHandler(handler)
+
+        logger.info('Start of daemon run self')
+	logger.info('logfile is %s ' % (logfile))
+
 
         # Read in config file.
         config = ConfigParser.ConfigParser()
@@ -467,25 +505,10 @@ class MyDaemon(Daemon):
         ttcommand = config.get("DAEMONSTUFF", "ttcommand")
         cycletime = config.get("DAEMONSTUFF", "cycletime")
 
-        # Configure logging within daemon code space.
-        for handler in logging.root.handlers[:]:
-            logging.root.removeHandler(handler)
-
-        logging.basicConfig(level=logging.INFO,
-                format='%(asctime)s %(levelname)s zen.zentt: %(message)s',
-                datefmt='%Y-%m-%d %H:%M:%S',
-                filename=logfile,
-                filemode='a')
-
-        logging.info('Config: ttcommand is ' + ttcommand)
-	logging.info('Config: cycletime is ' + cycletime)
-
-        sys.stderr = open(logfile, 'a')
-
         # Run daemon forever.......
         while True:
 
-	    if fg: print "\nzentt main loop\n"
+	    logger.info( "zentt main loop" )
 
 	    # Keep track of how many tickets we have created
 	    numttcreated = 0
@@ -497,12 +520,12 @@ class MyDaemon(Daemon):
                 # Define initial variables for ticket creation cycle.
                 ttcreate = 0
 
-		if fg: print "\n", e.evid
+		logger.debug( "#### Event %s" % (e.evid) )
 
 		# Get the event details
 		evt = dmd.ZenEventManager.getEventDetailFromStatusOrHistory(e.evid)
 		if not evt:
-		    logging.warning("Event %s not found" % (e.evid))
+		    logger.warning("Event %s not found" % (e.evid))
 		    continue
 
 		# Create a ticket for all new events that match defined criteria
@@ -512,13 +535,13 @@ class MyDaemon(Daemon):
 		if tt > 0:
 		    numttcreated = numttcreated + tt
 
-		# No errors, but the event is new and no ticket was created for it
-		if tt == 0:
+		# No errors, but if no ticket was created then we may want to clear the event
+		if ((tt == 0) and (config.has_section('AUTOCLEAR'))):
 		    # If no ticket was created then consider clearing the event
-		    if fg: print "Checking AUTOCLEAR"
+		    logger.debug( "Checking AUTOCLEAR" )
 
 		    if selectEvent( config, 'AUTOCLEAR', evt ):
-			if fg: print "Clearing event: ", e.evid
+			logger.debug( "Clearing event %s" % (e.evid) )
 
 			try:
 			    # Update event info
@@ -526,7 +549,7 @@ class MyDaemon(Daemon):
 			    whereClause = "where evid = '%s'" % (e.evid)
 			    reason = 'Event matches AUTOCLEAR criteria'
 
-			    logging.info( "Clearing event %s: %s" % (e.evid, reason) )
+			    logger.info( "Clearing event %s: %s" % (e.evid, reason) )
 
 			    dmd.ZenEventManager.updateEvents(update, whereClause, reason)
 
@@ -551,10 +574,10 @@ class MyDaemon(Daemon):
 
             # Write activity summary to log file.
             if numttcreated > 0:
-                    logging.info('Tickets created: %d', numttcreated)
+                    logger.info('Tickets created: %d', numttcreated)
 
             # Sleep for the amount of seconds configured in the cycletime setting before starting the next cycle.
-            logging.debug(' End of cycle - time to sleep')
+            logger.debug('End of cycle - sleeping for %s seconds', cycletime)
             time.sleep(int(cycletime))
 
 # Daemon runtime options are defined here.
@@ -567,8 +590,16 @@ if __name__ == "__main__":
                 # Option to start the daemon code in the foreground
 		if 'fg' == sys.argv[1]:
                         if os.path.exists(zenconfpath):
-                            logging.info('Starting zentt from zentt.py')
-			    fg = 1
+
+			    # create console log handler for use in 'fg' mode
+			    ch = logging.StreamHandler()
+			    ch.setLevel(logging.DEBUG)
+			    logFormatter = logging.Formatter(fmt='%(asctime)s %(levelname)s ZenTT: %(message)s',
+							    datefmt='%Y-%m-%d %H:%M:%S')
+			    ch.setFormatter(logFormatter)
+			    logger.addHandler(ch)
+			    logger.info('Starting zentt fg')
+
                             daemon.run()
                         else:
                             print '%s is missing, aborting fg.' % (zenconfpath)
@@ -576,7 +607,7 @@ if __name__ == "__main__":
                 # Option to start the daemon.
 		if 'start' == sys.argv[1]:
                         if os.path.exists(zenconfpath):
-                            logging.info('Starting zentt from zentt.py')
+                            logger.info('Starting zentt')
                             daemon.start()
                         else:
                             print '%s is missing, aborting start.' % (zenconfpath)
@@ -584,20 +615,20 @@ if __name__ == "__main__":
                 # Option to stop the daemon.
 		elif 'stop' == sys.argv[1]:
                         if os.path.exists(pidfile):
-                            logging.info('Deleting PID file %s ...', pidfile)
-                            logging.info('zentt shutting down')
+                            logger.info('Deleting PID file %s ...', pidfile)
+                            logger.info('zentt shutting down')
                         print 'stopping...'
 			daemon.stop()
 
                 # Option to restart the daemon.
 		elif 'restart' == sys.argv[1]:
                         if os.path.exists(pidfile):
-                            logging.info('Deleting PID file %s ...', pidfile)
-                            logging.info('zentt shutting down')
+                            logger.info('Deleting PID file %s ...', pidfile)
+                            logger.info('zentt shutting down')
                         print 'stopping...'
 			daemon.stop()
                         if os.path.exists(zenconfpath):
-                            logging.info('Starting zentt')
+                            logger.info('Starting zentt')
                             daemon.start()
                         else:
                             print '%s is missing, aborting start.' % (zenconfpath)

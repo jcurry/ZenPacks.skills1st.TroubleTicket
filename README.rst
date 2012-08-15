@@ -15,9 +15,8 @@ zentt, runs at a configurable interval (120 seconds by default) to assess any ne
 and create a ticket if filters are passed.  If a ticket is created then:
 
 * The Zenoss event is Acknowledged
-* The event ownerid field is set to Ticket
-* The event summary is modified to add the trouble ticket number returned by the ticket system
-* The event for the log is updated with the message "Trouble Ticket created"
+* The event ownerid field is set to 'Ticket <n>' where <n> is the trouble ticket number
+* The log for the event is updated with the message "Trouble Ticket created"
 
 In addition, the zentt daemon can close any Zenoss event for which a ticket has NOT been created and
 which passes any specified filters.
@@ -28,7 +27,7 @@ be installed provided no existing $ZENHOME/etc/zentt.conf file exists.  See late
 A sample shellscript, zenoss-remote-ticket, is shipped in the ZenPack's lib directory, to generate Remedy 
 tickets.  This file must be copied to the Trouble Ticket system.  
 
-zentt logs to $ZENHOME/log/zentt.log.
+zentt logs to $ZENHOME/log/zentt.log. The logfile is rotated when it reaches 10MB
 The sample zenoss-remote-ticket ticket creation script logs to tickets.log in the Cygwin home directory of the zenoss user.
 
 The zentt.conf Configuration File
@@ -46,14 +45,19 @@ DAEMONSTUFF
 
     * ttcommand: The command-line used to create a new trouble-ticket. See the *ttcommand* section below for details.
     * cycletime: The number of seconds to delay between polls.
+    * multi-ticket: If set to 'yes' or '1' this will allow each event to generate more than one ticket if it matches more than one filter section. The default is to create at most one ticket.
 
 AUTOCLEAR
-    This section defines a filter that selects events to be automatically cleared if they have not triggered a ticket.
+    If present, this section defines a filter that selects events to be automatically cleared if they have not triggered a ticket.
     Note that events are eligible to be cleared whatever their current eventState, so if you only want to clear new
     ones you should include eventstate in your filter definition.
 
 Every other section in the file defines a filter for creating trouble-tickets.
-One ticket is created for each section where the filter matches the event.
+Sections are processed in dictionary order, without regard to case.
+
+If multi-ticket is set in the DAEMONSTUFF section then
+One ticket is created for each section where the filter matches the event;
+otherwise, only the first matching section is used to create a ticket.
 
 Sections may contain config options that are not part of the filter. Most of these will be ignored,
 but any with names starting 'param-' will be available for substitution into the command-line when
@@ -171,6 +175,21 @@ in any /Server group except for /Server/Testing. Events must be at least Error (
   devicegroups-re-2: ^/Server
   notdevicegroups-testservers: /Server/Testing
   severity-min: 4
+
+Catch-all Section
+-----------------
+
+If you want a filter section that catches every event that was missed by other sections,
+give it a name that will sort at the end of the list (such as 'ZZZZ Catch All')
+and give it a filter that matches every event, e.g.:
+
+::
+
+  [ZZZ Catch All]
+  severity-min: 0
+
+Note that if multi-ticket mode is enabled then this section will always trigger,
+even if an earlier section created a ticket.
                                                                  
 Components
 ==========
