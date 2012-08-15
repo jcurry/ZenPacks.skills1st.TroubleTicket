@@ -3,8 +3,8 @@
 # or saved.  Do not modify them directly here.
 # NB: PACKAGES is deprecated
 NAME = "ZenPacks.skills1st.TroubleTicket"
-VERSION = "1.0"
-AUTHOR = "Jane Curry"
+VERSION = "1.1"
+AUTHOR = "Jane Curry / Andrew Findlay"
 LICENSE = ""
 NAMESPACE_PACKAGES = ['ZenPacks', 'ZenPacks.skills1st']
 PACKAGES = ['ZenPacks', 'ZenPacks.skills1st', 'ZenPacks.skills1st.TroubleTicket']
