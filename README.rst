@@ -311,7 +311,7 @@ Screenshots
 
 .. External References Below. Nothing Below This Line Should Be Rendered
 
-.. _Latest Package for Python 2.6: https://github.com/jcurry/ZenPacks.skills1st.TroubleTicket/blob/master/dist/ZenPacks.skills1st.TroubleTicket-1.0-py2.6.egg?raw=true
+.. _Latest Package for Python 2.6: https://github.com/jcurry/ZenPacks.skills1st.TroubleTicket/blob/master/dist/ZenPacks.skills1st.TroubleTicket-1.1-py2.6.egg?raw=true
 
 .. |tt_screenshot| image:: http://github.com/jcurry/ZenPacks.skills1st.TroubleTicket/raw/master/screenshots/tt_screenshot.jpg
 
